@@ -88,12 +88,6 @@
         <label>Team</label>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="team-select" onchange="onTeamChange()" style="flex:1"></select>
-          <button class="btn btn-danger btn-sm" id="remove-team-btn" onclick="showRemoveTeamConfirm()" style="white-space:nowrap;flex-shrink:0;display:none">&#128465; Remove</button>
-        </div>
-        <div id="remove-team-confirm" style="display:none;margin-top:10px;padding:14px 16px;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:8px">
-          <div style="font-size:.88rem;color:#c53030;margin-bottom:10px">Are you sure you want to remove team <strong id="remove-team-name"></strong>? All zip codes and MSLs for this team will be permanently deleted.</div>
-          <button class="btn btn-danger btn-sm" style="margin-right:8px" onclick="confirmRemoveTeam()">Yes, remove team</button>
-          <button class="btn btn-secondary btn-sm" onclick="cancelRemoveTeam()">Cancel</button>
         </div>
       </div>
       <div class="search-row">
@@ -326,16 +320,13 @@ async function init() {
 
 // ─── Team selector (search tab) ───────────────────────────────────────────
 function refreshTeamSelector() {
-  var sel       = document.getElementById('team-select');
-  var removeBtn = document.getElementById('remove-team-btn');
-  var prevVal   = sel.value;
+  var sel     = document.getElementById('team-select');
+  var prevVal = sel.value;
   sel.innerHTML = '';
 
   if (App.teams.length === 0) {
     sel.innerHTML = '<option value="">&#8212; No teams loaded &#8212;</option>';
     App.selectedTeam = '';
-    removeBtn.style.display = 'none';
-    cancelRemoveTeam();   // hide confirmation if it was open
     refreshMslSummary();
     return;
   }
@@ -347,31 +338,13 @@ function refreshTeamSelector() {
   // Restore previous selection or default to first team
   sel.value = App.teams.indexOf(prevVal) !== -1 ? prevVal : App.teams[0];
   App.selectedTeam = sel.value;
-  removeBtn.style.display = '';
   refreshMslSummary();
 }
 
 function onTeamChange() {
   App.selectedTeam = document.getElementById('team-select').value;
-  cancelRemoveTeam();   // dismiss confirmation if team is switched mid-flow
   refreshMslSummary();
   document.getElementById('search-result').innerHTML = '';
-}
-
-// ─── Remove team ──────────────────────────────────────────────────────────
-function showRemoveTeamConfirm() {
-  var team = App.selectedTeam;
-  if (!team) return;
-  document.getElementById('remove-team-name').textContent = team;
-  document.getElementById('remove-team-confirm').style.display = 'block';
-  document.getElementById('remove-team-btn').style.display     = 'none';
-}
-
-function cancelRemoveTeam() {
-  document.getElementById('remove-team-confirm').style.display = 'none';
-  if (App.teams.length > 0) {
-    document.getElementById('remove-team-btn').style.display = '';
-  }
 }
 
 async function confirmRemoveTeam() {
@@ -382,8 +355,7 @@ async function confirmRemoveTeam() {
     var res  = await fetch('/api/team/' + encodeURIComponent(team), { method: 'DELETE' });
     var data = await res.json();
     if (!res.ok) {
-      document.getElementById('remove-team-confirm').innerHTML +=
-        '<div class="alert alert-error" style="margin-top:8px">Remove failed. Please try again.</div>';
+      console.error('Remove team failed:', data);
       return;
     }
 
@@ -393,7 +365,6 @@ async function confirmRemoveTeam() {
     App.teams    = appData.teams    || [];
     App.teamData = appData.teamData || {};
 
-    cancelRemoveTeam();   // hide confirmation panel
     document.getElementById('search-result').innerHTML = '';
     refreshTeamSelector();
     refreshAdminTeamDropdown();
