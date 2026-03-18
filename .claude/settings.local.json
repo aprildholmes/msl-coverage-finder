@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm install --prefix \"C:/Users/AprilHolmes/OneDrive - Acceleration Point/Desktop/msl-coverage-finder\")",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}

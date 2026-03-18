@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MSL Coverage Finder</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
+  header{background:#1e3a5f;color:#fff;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:1.2rem;font-weight:600;letter-spacing:.3px}
+  header span{font-size:.8rem;opacity:.7}
+  .tab-bar{background:#fff;border-bottom:2px solid #e2e8f0;display:flex;padding:0 32px}
+  .tab{padding:14px 20px;cursor:pointer;font-size:.9rem;color:#718096;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s}
+  .tab.active{color:#1e3a5f;border-color:#1e3a5f;font-weight:600}
+  .main{max-width:900px;margin:32px auto;padding:0 24px}
+  .card{background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:24px}
+  .card h2{font-size:1rem;font-weight:600;color:#2d3748;margin-bottom:18px}
+  input[type=text],input[type=date],input[type=password],select{width:100%;padding:10px 14px;border:1.5px solid #cbd5e0;border-radius:8px;font-size:.95rem;outline:none;transition:.2s;background:#fff}
+  input:focus,select:focus{border-color:#1e3a5f;box-shadow:0 0 0 3px rgba(30,58,95,.1)}
+  label{display:block;font-size:.82rem;font-weight:600;color:#4a5568;margin-bottom:5px;margin-top:14px}
+  label:first-child{margin-top:0}
+  .btn{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;transition:.2s}
+  .btn-primary{background:#1e3a5f;color:#fff}.btn-primary:hover{background:#16304f}
+  .btn-secondary{background:#e2e8f0;color:#2d3748}.btn-secondary:hover{background:#cbd5e0}
+  .btn-danger{background:#fff0f0;color:#c53030;border:1.5px solid #fed7d7}.btn-danger:hover{background:#fed7d7}
+  .btn-sm{padding:6px 14px;font-size:.82rem}
+  .search-row{display:flex;gap:10px;align-items:flex-end}
+  .search-row>div{flex:1}
+  .result-box{margin-top:20px;padding:20px;border-radius:10px;background:#f0f7ff;border:1.5px solid #bee3f8}
+  .result-box.coverage{background:#fffbeb;border-color:#f6e05e}
+  .result-name{font-size:1.3rem;font-weight:700;color:#1e3a5f}
+  .result-email{color:#2b6cb0;font-size:.95rem;margin-top:4px}
+  .result-meta{font-size:.82rem;color:#718096;margin-top:6px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+  .badge-coverage{background:#fefcbf;color:#744210;border:1px solid #f6e05e}
+  .badge-active{background:#c6f6d5;color:#276749;border:1px solid #9ae6b4}
+  .badge-upcoming{background:#ebf4ff;color:#2b6cb0;border:1px solid #bee3f8}
+  .empty{text-align:center;color:#a0aec0;padding:32px;font-size:.9rem}
+  .upload-area{border:2px dashed #cbd5e0;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:.2s}
+  .upload-area:hover{border-color:#1e3a5f;background:#f7faff}
+  .upload-area p{color:#718096;font-size:.9rem;margin-top:8px}
+  .upload-area .icon{font-size:2rem}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th{text-align:left;padding:10px 12px;background:#f7fafc;color:#4a5568;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#2d3748;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#f7fafc}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .admin-gate{background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 8px rgba(0,0,0,.07);max-width:380px;margin:60px auto;text-align:center}
+  .admin-gate h2{margin-bottom:6px;color:#1e3a5f}
+  .admin-gate p{font-size:.85rem;color:#718096;margin-bottom:24px}
+  .alert{padding:12px 16px;border-radius:8px;font-size:.88rem;margin-bottom:16px}
+  .alert-error{background:#fff5f5;color:#c53030;border:1.5px solid #fed7d7}
+  .alert-success{background:#f0fff4;color:#276749;border:1.5px solid #9ae6b4}
+  .no-result{margin-top:20px;padding:16px;border-radius:10px;background:#fff5f5;border:1.5px solid #fed7d7;color:#c53030;font-size:.9rem}
+  .msl-list{margin-top:8px}
+  .msl-chip{display:inline-block;background:#edf2f7;border-radius:6px;padding:4px 10px;font-size:.8rem;color:#2d3748;margin:3px}
+  .section-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#a0aec0;margin-bottom:10px}
+  .admin-tabs{display:flex;gap:4px;margin-bottom:24px;background:#f7fafc;border-radius:10px;padding:4px}
+  .admin-tab{flex:1;text-align:center;padding:9px;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:#718096;transition:.2s}
+  .admin-tab.active{background:#fff;color:#1e3a5f;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+  .meta-text{font-size:.78rem;color:#a0aec0}
+  .hint-text{font-size:.78rem;color:#718096;margin-top:4px}
+  .required-star{color:#e53e3e}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#128269; MSL Coverage Finder</h1>
+  <span>Medical Information Portal</span>
+</header>
+
+<div class="tab-bar">
+  <div class="tab active" id="tab-btn-search" onclick="showTab('search')">Zip Code Search</div>
+  <div class="tab" id="tab-btn-admin" onclick="showTab('admin')">Admin &mdash; Coverage</div>
+  <div class="tab" id="tab-btn-upload" onclick="showTab('upload')">Upload ZTT</div>
+</div>
+
+<div class="main">
+
+  <!-- SEARCH TAB -->
+  <div id="tab-search">
+    <div class="card">
+      <h2>Look up an MSL by zip code</h2>
+      <div style="margin-bottom:16px">
+        <label>Team</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="team-select" onchange="onTeamChange()" style="flex:1"></select>
+          <button class="btn btn-danger btn-sm" id="remove-team-btn" onclick="showRemoveTeamConfirm()" style="white-space:nowrap;flex-shrink:0;display:none">&#128465; Remove</button>
+        </div>
+        <div id="remove-team-confirm" style="display:none;margin-top:10px;padding:14px 16px;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:8px">
+          <div style="font-size:.88rem;color:#c53030;margin-bottom:10px">Are you sure you want to remove team <strong id="remove-team-name"></strong>? All zip codes and MSLs for this team will be permanently deleted.</div>
+          <button class="btn btn-danger btn-sm" style="margin-right:8px" onclick="confirmRemoveTeam()">Yes, remove team</button>
+          <button class="btn btn-secondary btn-sm" onclick="cancelRemoveTeam()">Cancel</button>
+        </div>
+      </div>
+      <div class="search-row">
+        <div>
+          <label>Zip Code</label>
+          <input type="text" id="zip-input" placeholder="e.g. 10001" maxlength="5" oninput="this.value=this.value.replace(/\D/g,'')"/>
+        </div>
+        <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        <button class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+      </div>
+      <div id="search-result"></div>
+    </div>
+    <div class="card">
+      <div class="section-label">Teams Currently Loaded</div>
+      <div id="msl-summary" class="msl-list"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN TAB -->
+  <div id="tab-admin" style="display:none">
+    <div id="admin-gate-wrap">
+      <div class="admin-gate">
+        <h2>Admin Access</h2>
+        <p>Enter the admin PIN to manage coverage reassignments.</p>
+        <div id="pin-error"></div>
+        <label>Admin PIN</label>
+        <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="6"
+               onkeydown="if(event.key==='Enter') checkPin()"/>
+        <br/><br/>
+        <button class="btn btn-primary" style="width:100%" onclick="checkPin()">Enter</button>
+        <p style="margin-top:12px;font-size:.75rem;color:#a0aec0">Contact your administrator for the PIN.</p>
+      </div>
+    </div>
+
+    <div id="admin-panel" style="display:none">
+      <div class="admin-tabs">
+        <div class="admin-tab active" id="atab-btn-assign"     onclick="showAdminTab('assign')">Create Reassignment</div>
+        <div class="admin-tab"        id="atab-btn-active"     onclick="showAdminTab('active')">Active &amp; Upcoming</div>
+        <div class="admin-tab"        id="atab-btn-covhistory" onclick="showAdminTab('covhistory')">Coverage History</div>
+      </div>
+
+      <div id="atab-assign">
+        <div class="card">
+          <h2>Create Coverage Reassignment</h2>
+          <p style="font-size:.85rem;color:#718096;margin-bottom:16px">Temporarily redirect all of an MSL's zip codes to a covering MSL for a defined date range.</p>
+          <div>
+            <label>Team</label>
+            <select id="cov-team" onchange="refreshCovDropdowns()">
+              <option value="">&#8212; Select Team &#8212;</option>
+            </select>
+          </div>
+          <div class="two-col" style="margin-top:14px">
+            <div>
+              <label>MSL Going on Leave</label>
+              <select id="cov-from"><option value="">&#8212; Select MSL &#8212;</option></select>
+            </div>
+            <div>
+              <label>Covering MSL</label>
+              <select id="cov-to"><option value="">&#8212; Select MSL &#8212;</option></select>
+            </div>
+          </div>
+          <div class="two-col">
+            <div>
+              <label>Coverage Start Date</label>
+              <input type="date" id="cov-start"/>
+            </div>
+            <div>
+              <label>Coverage End Date</label>
+              <input type="date" id="cov-end"/>
+            </div>
+          </div>
+          <div id="cov-error" style="margin-top:12px"></div>
+          <div style="margin-top:18px">
+            <button class="btn btn-primary" onclick="addCoverage()">Save Coverage Period</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="atab-active" style="display:none">
+        <div class="card">
+          <h2>Active &amp; Upcoming Coverage</h2>
+          <div id="coverage-table"></div>
+        </div>
+      </div>
+
+      <div id="atab-covhistory" style="display:none">
+        <div class="card">
+          <h2>Coverage History</h2>
+          <p style="font-size:.85rem;color:#718096;margin-bottom:18px">A log of all expired coverage assignments.</p>
+          <div id="history-table"></div>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:600;color:#2d3748;font-size:.95rem">Session Lookup Summary</div>
+          <div style="font-size:.82rem;color:#718096;margin-top:3px">Export a CSV audit log of all zip code lookups performed during this session.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="exportSessionSummary()" style="white-space:nowrap;flex-shrink:0">&#128229; Export Session Summary</button>
+      </div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:600;color:#2d3748;font-size:.95rem">Reassignment Export</div>
+          <div style="font-size:.82rem;color:#718096;margin-top:3px">Download a CSV of all coverage reassignments &mdash; upcoming, active, and historical.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="exportReassignments()" style="white-space:nowrap;flex-shrink:0">&#128229; Export Reassignments</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPLOAD TAB -->
+  <div id="tab-upload" style="display:none">
+
+    <div id="upload-gate-wrap">
+      <div class="admin-gate">
+        <h2>Admin Access Required</h2>
+        <p>Upload and data management are restricted to admin users. Please log in via the Admin &mdash; Coverage tab.</p>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="showTab('admin')">Go to Admin &mdash; Coverage Tab</button>
+      </div>
+    </div>
+
+    <div id="upload-panel" style="display:none">
+    <div class="card">
+      <h2>Upload ZTT File</h2>
+      <p style="font-size:.85rem;color:#718096;margin-bottom:18px">Upload a CSV or XLSX file. Expected columns: <strong>zip, territory_name, msl_name, msl_email</strong></p>
+      <div style="margin-bottom:18px">
+        <label>Team Name <span class="required-star">*</span></label>
+        <input type="text" id="team-name-input" placeholder="e.g. Oncology, Neurology&hellip;" maxlength="60"/>
+        <div class="hint-text">Identifies which team this file belongs to. Re-uploading with the same name replaces that team&rsquo;s data.</div>
+      </div>
+      <div class="upload-area" onclick="document.getElementById('file-input').click()">
+        <div class="icon">&#128194;</div>
+        <strong>Click to select your ZTT file</strong>
+        <p>Supports .csv and .xlsx files</p>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.xlsx" style="display:none" onchange="handleFile(event)"/>
+      <div id="upload-status" style="margin-top:16px"></div>
+    </div>
+    <div class="card">
+      <h2>Or load sample data</h2>
+      <p style="font-size:.85rem;color:#718096;margin-bottom:14px">Load a built-in demo dataset to explore the tool right away.</p>
+      <div style="margin-bottom:14px">
+        <label>Team Name for Sample Data</label>
+        <input type="text" id="sample-team-input" placeholder="Sample" value="Sample" maxlength="60"/>
+      </div>
+      <button class="btn btn-secondary" onclick="loadSampleData()">Load Sample ZTT Data</button>
+    </div>
+    <div class="card">
+      <h2>Clear all data</h2>
+      <p style="font-size:.85rem;color:#718096;margin-bottom:14px">Remove all loaded zip codes, MSLs, and coverage assignments to start fresh.</p>
+      <div id="clear-confirm" style="display:none;margin-bottom:12px">
+        <div class="alert alert-error">Are you sure? This will remove all data, coverage assignments, and history.</div>
+        <button class="btn btn-danger" style="margin-right:8px" onclick="confirmClear()">Yes, clear everything</button>
+        <button class="btn btn-secondary" onclick="cancelClear()">Cancel</button>
+      </div>
+      <button class="btn btn-danger" id="clear-btn" onclick="showClearConfirm()">Clear All Data</button>
+      <div id="clear-status" style="margin-top:12px"></div>
+    </div>
+    <div class="card" id="preview-card" style="display:none">
+      <h2>Loaded Data Preview</h2>
+      <div id="preview-table"></div>
+    </div>
+    </div><!-- /upload-panel -->
+  </div>
+
+</div>
+
+<script>
+// ─── App state ──────────────────────────────────────────────────────────────
+var App = {
+  teams:         [],   // ['Oncology', 'Neurology', ...]
+  teamData:      {},   // { teamName: { zttData: {zip: {...}}, mslList: [{name,email}] } }
+  selectedTeam:  '',   // currently selected team for search
+  coverages:     [],   // active + upcoming coverages
+  covLog:        [],   // expired coverage history
+  adminUnlocked: false,
+  sessionLog:    []    // audit log of zip lookups this session
+};
+
+// ─── Utility ──────────────────────────────────────────────────────────────
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function formatDateTime(d) {
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+         ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  var p = d.split('-');
+  return p[1] + '/' + p[2] + '/' + p[0];
+}
+
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ─── Initialisation ───────────────────────────────────────────────────────
+async function init() {
+  try {
+    var res  = await fetch('/api/data');
+    var data = await res.json();
+    App.teams    = data.teams    || [];
+    App.teamData = data.teamData || {};
+    App.coverages = data.coverages || [];
+    App.covLog    = data.history   || [];
+    refreshTeamSelector();
+    refreshAdminTeamDropdown();
+    refreshCovDropdowns();
+
+    // Restore admin session if still valid (e.g. after page refresh)
+    var authRes  = await fetch('/api/admin/status');
+    var authData = await authRes.json();
+    if (authData.authenticated) {
+      App.adminUnlocked = true;
+      document.getElementById('admin-gate-wrap').style.display  = 'none';
+      document.getElementById('admin-panel').style.display      = 'block';
+      document.getElementById('upload-gate-wrap').style.display = 'none';
+      document.getElementById('upload-panel').style.display     = 'block';
+    }
+  } catch (e) {
+    console.error('Init failed:', e);
+  }
+}
+
+// ─── Team selector (search tab) ───────────────────────────────────────────
+function refreshTeamSelector() {
+  var sel       = document.getElementById('team-select');
+  var removeBtn = document.getElementById('remove-team-btn');
+  var prevVal   = sel.value;
+  sel.innerHTML = '';
+
+  if (App.teams.length === 0) {
+    sel.innerHTML = '<option value="">&#8212; No teams loaded &#8212;</option>';
+    App.selectedTeam = '';
+    removeBtn.style.display = 'none';
+    cancelRemoveTeam();   // hide confirmation if it was open
+    refreshMslSummary();
+    return;
+  }
+
+  App.teams.forEach(function(t) {
+    sel.innerHTML += '<option value="' + esc(t) + '">' + esc(t) + '</option>';
+  });
+
+  // Restore previous selection or default to first team
+  sel.value = App.teams.indexOf(prevVal) !== -1 ? prevVal : App.teams[0];
+  App.selectedTeam = sel.value;
+  removeBtn.style.display = '';
+  refreshMslSummary();
+}
+
+function onTeamChange() {
+  App.selectedTeam = document.getElementById('team-select').value;
+  cancelRemoveTeam();   // dismiss confirmation if team is switched mid-flow
+  refreshMslSummary();
+  document.getElementById('search-result').innerHTML = '';
+}
+
+// ─── Remove team ──────────────────────────────────────────────────────────
+function showRemoveTeamConfirm() {
+  var team = App.selectedTeam;
+  if (!team) return;
+  document.getElementById('remove-team-name').textContent = team;
+  document.getElementById('remove-team-confirm').style.display = 'block';
+  document.getElementById('remove-team-btn').style.display     = 'none';
+}
+
+function cancelRemoveTeam() {
+  document.getElementById('remove-team-confirm').style.display = 'none';
+  if (App.teams.length > 0) {
+    document.getElementById('remove-team-btn').style.display = '';
+  }
+}
+
+async function confirmRemoveTeam() {
+  var team = App.selectedTeam;
+  if (!team) return;
+
+  try {
+    var res  = await fetch('/api/team/' + encodeURIComponent(team), { method: 'DELETE' });
+    var data = await res.json();
+    if (!res.ok) {
+      document.getElementById('remove-team-confirm').innerHTML +=
+        '<div class="alert alert-error" style="margin-top:8px">Remove failed. Please try again.</div>';
+      return;
+    }
+
+    // Refresh all state from server
+    var appRes  = await fetch('/api/data');
+    var appData = await appRes.json();
+    App.teams    = appData.teams    || [];
+    App.teamData = appData.teamData || {};
+
+    cancelRemoveTeam();   // hide confirmation panel
+    document.getElementById('search-result').innerHTML = '';
+    refreshTeamSelector();
+    refreshAdminTeamDropdown();
+    refreshCovDropdowns();
+  } catch (e) {
+    console.error('Remove team failed:', e);
+  }
+}
+
+// ─── Admin team dropdown (coverage creation) ──────────────────────────────
+function refreshAdminTeamDropdown() {
+  var sel = document.getElementById('cov-team');
+  if (!sel) return;
+  var prevVal = sel.value;
+  sel.innerHTML = '<option value="">&#8212; Select Team &#8212;</option>';
+  App.teams.forEach(function(t) {
+    sel.innerHTML += '<option value="' + esc(t) + '">' + esc(t) + '</option>';
+  });
+  if (App.teams.indexOf(prevVal) !== -1) sel.value = prevVal;
+  refreshCovDropdowns();
+}
+
+// ─── Tab navigation ───────────────────────────────────────────────────────
+function showTab(t) {
+  ['search', 'admin', 'upload'].forEach(function(id) {
+    document.getElementById('tab-' + id).style.display     = id === t ? 'block' : 'none';
+    document.getElementById('tab-btn-' + id).classList.toggle('active', id === t);
+  });
+  if (t === 'admin' && App.adminUnlocked) {
+    refreshCoverageTable();
+    refreshHistoryTable();
+  }
+}
+
+// ─── Admin sub-tabs ───────────────────────────────────────────────────────
+function showAdminTab(t) {
+  ['assign', 'active', 'covhistory'].forEach(function(id) {
+    document.getElementById('atab-' + id).style.display = id === t ? 'block' : 'none';
+    document.getElementById('atab-btn-' + id).classList.toggle('active', id === t);
+  });
+  if (t === 'active')     refreshCoverageTable();
+  if (t === 'covhistory') refreshHistoryTable();
+}
+
+// ─── Admin PIN ────────────────────────────────────────────────────────────
+async function checkPin() {
+  var pin   = document.getElementById('pin-input').value;
+  var errEl = document.getElementById('pin-error');
+  errEl.innerHTML = '';
+  try {
+    var res  = await fetch('/api/admin/verify', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ pin: pin })
+    });
+    var data = await res.json();
+    if (data.success) {
+      App.adminUnlocked = true;
+      document.getElementById('admin-gate-wrap').style.display  = 'none';
+      document.getElementById('admin-panel').style.display      = 'block';
+      document.getElementById('upload-gate-wrap').style.display = 'none';
+      document.getElementById('upload-panel').style.display     = 'block';
+      refreshCoverageTable();
+      refreshHistoryTable();
+    } else {
+      errEl.innerHTML = '<div class="alert alert-error">Incorrect PIN. Please try again.</div>';
+    }
+  } catch (e) {
+    errEl.innerHTML = '<div class="alert alert-error">Server error. Please try again.</div>';
+  }
+}
+
+// ─── Zip search ───────────────────────────────────────────────────────────
+function clearSearch() {
+  document.getElementById('zip-input').value         = '';
+  document.getElementById('search-result').innerHTML = '';
+}
+
+async function doSearch() {
+  var zip  = document.getElementById('zip-input').value.trim();
+  var team = App.selectedTeam;
+  var box  = document.getElementById('search-result');
+
+  if (!zip || zip.length < 5) {
+    box.innerHTML = '<div class="alert alert-error">Please enter a 5-digit zip code.</div>';
+    return;
+  }
+  if (App.teams.length === 0) {
+    box.innerHTML = '<div class="alert alert-error">No data loaded yet. Go to the <strong>Upload ZTT</strong> tab to load your file or sample data.</div>';
+    return;
+  }
+  if (!team) {
+    box.innerHTML = '<div class="alert alert-error">Please select a team before searching.</div>';
+    return;
+  }
+
+  try {
+    var res  = await fetch('/api/search?zip=' + encodeURIComponent(zip) + '&team=' + encodeURIComponent(team));
+    var data = await res.json();
+    var now  = new Date();
+
+    if (!data.found) {
+      App.sessionLog.push({ ts: now, zip: zip, team: team, msl: '', territory: '', note: 'No MSL found' });
+      box.innerHTML = '<div class="no-result">No MSL found for zip code <strong>' + esc(zip) + '</strong> in team <strong>' + esc(team) + '</strong>. This zip may not be in the territory map.</div>';
+      return;
+    }
+
+    var entry = data.entry;
+    var cov   = data.coverage;
+
+    if (cov) {
+      App.sessionLog.push({ ts: now, zip: zip, team: team, msl: cov.to_name, territory: entry.territory || '', note: 'Coverage Active \u2013 covering for ' + cov.from_name });
+      box.innerHTML =
+        '<div class="result-box coverage">' +
+          '<div style="margin-bottom:8px"><span class="badge badge-coverage">Coverage Active</span></div>' +
+          '<div class="result-name">'  + esc(cov.to_name)  + '</div>' +
+          '<div class="result-email">' + esc(cov.to_email) + '</div>' +
+          '<div class="result-meta">Covering for <strong>' + esc(cov.from_name) + '</strong> &middot; ' +
+            formatDate(cov.start_date) + ' &ndash; ' + formatDate(cov.end_date) +
+          '</div>' +
+        '</div>';
+    } else {
+      App.sessionLog.push({ ts: now, zip: zip, team: team, msl: entry.msl_name, territory: entry.territory || '', note: '' });
+      box.innerHTML =
+        '<div class="result-box">' +
+          '<div style="margin-bottom:8px"><span class="badge badge-active">Assigned MSL</span></div>' +
+          '<div class="result-name">'  + esc(entry.msl_name)  + '</div>' +
+          '<div class="result-email">' + esc(entry.msl_email) + '</div>' +
+          '<div class="result-meta">' +
+            (entry.territory ? 'Territory: ' + esc(entry.territory) + ' &middot; ' : '') +
+            'Zip Code ' + esc(zip) +
+          '</div>' +
+        '</div>';
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="alert alert-error">Search failed. Please try again.</div>';
+  }
+}
+
+// ─── MSL summary (Search tab) ─────────────────────────────────────────────
+function refreshMslSummary() {
+  var el = document.getElementById('msl-summary');
+
+  if (App.teams.length === 0) {
+    el.innerHTML = '<div style="color:#a0aec0;font-size:.85rem;padding:8px 0">No data loaded yet. Go to the <strong>Upload ZTT</strong> tab to get started.</div>';
+    return;
+  }
+
+  var chips = App.teams.map(function(t) {
+    return '<span class="msl-chip">&#128197; ' + esc(t) + '</span>';
+  }).join('');
+  el.innerHTML = chips;
+}
+
+// ─── Coverage dropdowns (filtered by selected admin team) ─────────────────
+function refreshCovDropdowns() {
+  var teamSel     = document.getElementById('cov-team');
+  var team        = teamSel ? teamSel.value : '';
+  var mslsForTeam = (team && App.teamData[team]) ? App.teamData[team].mslList : [];
+
+  ['cov-from', 'cov-to'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    var val = sel.value;
+    sel.innerHTML = '<option value="">&#8212; Select MSL &#8212;</option>';
+    mslsForTeam.forEach(function(m) {
+      sel.innerHTML += '<option value="' + esc(m.name) + '">' + esc(m.name) + '</option>';
+    });
+    sel.value = val;
+  });
+}
+
+// ─── Coverage table (active & upcoming) ──────────────────────────────────
+async function refreshCoverageTable() {
+  var el = document.getElementById('coverage-table');
+  try {
+    var res  = await fetch('/api/coverages');
+    if (res.status === 401) { showAdminGate(); return; }
+    App.coverages = await res.json();
+  } catch (e) {
+    el.innerHTML = '<div class="alert alert-error">Failed to load coverage data.</div>';
+    return;
+  }
+
+  if (App.coverages.length === 0) {
+    el.innerHTML = '<div class="empty">No active or upcoming coverage assignments.</div>';
+    return;
+  }
+
+  var today = todayStr();
+  var html  = '<table><tr><th>Team</th><th>MSL on Leave</th><th>Covered By</th><th>Start</th><th>End</th><th>Status</th><th></th></tr>';
+  App.coverages.forEach(function(c) {
+    var status = today < c.start_date ? 'Upcoming' : 'Active Now';
+    var cls    = today < c.start_date ? 'badge badge-upcoming' : 'badge badge-active';
+    html += '<tr>' +
+      '<td class="meta-text">' + esc(c.team || 'Default') + '</td>' +
+      '<td>' + esc(c.from_name) + '</td>' +
+      '<td>' + esc(c.to_name)   + '</td>' +
+      '<td>' + formatDate(c.start_date) + '</td>' +
+      '<td>' + formatDate(c.end_date)   + '</td>' +
+      '<td><span class="' + cls + '">' + status + '</span></td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="removeCoverage(' + c.id + ')">Remove</button></td>' +
+    '</tr>';
+  });
+  el.innerHTML = html + '</table>';
+}
+
+// ─── Remove a coverage ────────────────────────────────────────────────────
+async function removeCoverage(id) {
+  try {
+    var res = await fetch('/api/coverage/' + id, { method: 'DELETE' });
+    if (res.status === 401) { showAdminGate(); return; }
+    await refreshCoverageTable();
+  } catch (e) {
+    console.error('Remove failed:', e);
+  }
+}
+
+// ─── Add coverage ─────────────────────────────────────────────────────────
+async function addCoverage() {
+  var covTeam   = document.getElementById('cov-team').value;
+  var fromName  = document.getElementById('cov-from').value;
+  var toName    = document.getElementById('cov-to').value;
+  var startDate = document.getElementById('cov-start').value;
+  var endDate   = document.getElementById('cov-end').value;
+  var errEl     = document.getElementById('cov-error');
+
+  // Client-side pre-validation (mirrors server)
+  if (!covTeam || !fromName || !toName || !startDate || !endDate) {
+    errEl.innerHTML = '<div class="alert alert-error">Please fill in all fields including team.</div>'; return;
+  }
+  if (fromName === toName) {
+    errEl.innerHTML = '<div class="alert alert-error">The covering MSL must be different from the MSL on leave.</div>'; return;
+  }
+  if (startDate > endDate) {
+    errEl.innerHTML = '<div class="alert alert-error">End date must be after start date.</div>'; return;
+  }
+
+  try {
+    var res  = await fetch('/api/coverage', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ from_name: fromName, to_name: toName, start_date: startDate, end_date: endDate, team: covTeam })
+    });
+    var data = await res.json();
+
+    if (!res.ok) {
+      errEl.innerHTML = '<div class="alert alert-error">' + esc(data.error || 'Save failed.') + '</div>';
+      return;
+    }
+
+    errEl.innerHTML =
+      '<div class="alert alert-success" style="display:flex;justify-content:space-between;align-items:center">' +
+        'Coverage saved: ' + esc(fromName) + ' covered by ' + esc(toName) + ' (' + esc(covTeam) + ').' +
+        '<span onclick="document.getElementById(\'cov-error\').innerHTML=\'\'" style="cursor:pointer;font-size:1.1rem;line-height:1;margin-left:12px;opacity:.6">&times;</span>' +
+      '</div>';
+
+    document.getElementById('cov-from').value  = '';
+    document.getElementById('cov-to').value    = '';
+    document.getElementById('cov-start').value = '';
+    document.getElementById('cov-end').value   = '';
+  } catch (e) {
+    errEl.innerHTML = '<div class="alert alert-error">Server error. Please try again.</div>';
+  }
+}
+
+// ─── Coverage history ─────────────────────────────────────────────────────
+async function refreshHistoryTable() {
+  var el = document.getElementById('history-table');
+  try {
+    var res = await fetch('/api/history');
+    if (res.status === 401) { showAdminGate(); return; }
+    App.covLog = await res.json();
+  } catch (e) {
+    el.innerHTML = '<div class="alert alert-error">Failed to load history.</div>';
+    return;
+  }
+
+  if (App.covLog.length === 0) {
+    el.innerHTML = '<div class="empty">No expired coverage assignments yet.</div>';
+    return;
+  }
+
+  var html = '<table><tr><th>Team</th><th>MSL on Leave</th><th>Covered By</th><th>Start</th><th>End</th><th>Created By</th><th>Created At</th></tr>';
+  App.covLog.forEach(function(c) {
+    html += '<tr>' +
+      '<td class="meta-text">' + esc(c.team || 'Default') + '</td>' +
+      '<td>' + esc(c.from_name) + '</td>' +
+      '<td>' + esc(c.to_name)   + '</td>' +
+      '<td>' + formatDate(c.start_date) + '</td>' +
+      '<td>' + formatDate(c.end_date)   + '</td>' +
+      '<td>' + esc(c.created_by || 'Admin') + '</td>' +
+      '<td class="meta-text">' + esc(c.created_at || '—') + '</td>' +
+    '</tr>';
+  });
+  el.innerHTML = html + '</table>';
+}
+
+// ─── Force admin gate (session expired) ──────────────────────────────────
+function showAdminGate() {
+  App.adminUnlocked = false;
+  document.getElementById('admin-gate-wrap').style.display  = 'block';
+  document.getElementById('admin-panel').style.display      = 'none';
+  document.getElementById('upload-gate-wrap').style.display = 'block';
+  document.getElementById('upload-panel').style.display     = 'none';
+  document.getElementById('pin-input').value                = '';
+  document.getElementById('pin-error').innerHTML =
+    '<div class="alert alert-error">Session expired. Please re-enter your PIN.</div>';
+}
+
+// ─── File upload ──────────────────────────────────────────────────────────
+async function handleFile(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  var teamName = document.getElementById('team-name-input').value.trim();
+  var statusEl = document.getElementById('upload-status');
+
+  if (!teamName) {
+    statusEl.innerHTML = '<div class="alert alert-error">Please enter a team name before uploading.</div>';
+    e.target.value = '';
+    return;
+  }
+
+  statusEl.innerHTML = '<div class="alert" style="background:#f7fafc;border:1.5px solid #e2e8f0;color:#4a5568">Uploading&#8230;</div>';
+
+  var fd = new FormData();
+  fd.append('file', file);
+  fd.append('team', teamName);
+
+  try {
+    var res  = await fetch('/api/upload', { method: 'POST', body: fd });
+    var data = await res.json();
+
+    if (res.status === 401) {
+      showAdminGate();
+      showTab('admin');
+      return;
+    }
+    if (!res.ok) {
+      statusEl.innerHTML = '<div class="alert alert-error">' + esc(data.error || 'Upload failed.') + '</div>';
+      return;
+    }
+
+    // Refresh local state
+    var appRes  = await fetch('/api/data');
+    var appData = await appRes.json();
+    App.teams    = appData.teams    || [];
+    App.teamData = appData.teamData || {};
+    refreshTeamSelector();
+    refreshAdminTeamDropdown();
+    // Select the just-uploaded team
+    document.getElementById('team-select').value = data.teamName;
+    App.selectedTeam = data.teamName;
+    refreshMslSummary();
+
+    statusEl.innerHTML =
+      '<div class="alert alert-success" style="display:flex;justify-content:space-between;align-items:center">' +
+        (file.name.endsWith('.xlsx') ? 'XLSX' : 'CSV') + ' loaded for team <strong>' + esc(data.teamName) + '</strong> &mdash; ' +
+        data.zipCount + ' zip codes across ' + data.mslCount + ' MSLs.' +
+        '<span onclick="document.getElementById(\'upload-status\').innerHTML=\'\'" style="cursor:pointer;font-size:1.1rem;line-height:1;margin-left:12px;opacity:.6">&times;</span>' +
+      '</div>';
+
+    showPreview(data.preview);
+  } catch (err) {
+    statusEl.innerHTML = '<div class="alert alert-error">Upload failed: ' + esc(err.message) + '</div>';
+  }
+}
+
+// ─── Sample data ──────────────────────────────────────────────────────────
+async function loadSampleData() {
+  var teamName = document.getElementById('sample-team-input').value.trim() || 'Sample';
+  try {
+    var res  = await fetch('/api/sample', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ team: teamName })
+    });
+    var data = await res.json();
+
+    if (res.status === 401) {
+      showAdminGate();
+      showTab('admin');
+      return;
+    }
+
+    // Refresh local state
+    var appRes  = await fetch('/api/data');
+    var appData = await appRes.json();
+    App.teams    = appData.teams    || [];
+    App.teamData = appData.teamData || {};
+    refreshTeamSelector();
+    refreshAdminTeamDropdown();
+    // Select the just-loaded team
+    document.getElementById('team-select').value = data.teamName;
+    App.selectedTeam = data.teamName;
+    refreshMslSummary();
+
+    document.getElementById('upload-status').innerHTML =
+      '<div class="alert alert-success" style="display:flex;justify-content:space-between;align-items:center">' +
+        'Sample data loaded for team <strong>' + esc(data.teamName) + '</strong> &mdash; ' +
+        data.zipCount + ' zip codes across ' + data.mslCount + ' MSLs.' +
+        '<span onclick="document.getElementById(\'upload-status\').innerHTML=\'\'" style="cursor:pointer;font-size:1.1rem;line-height:1;margin-left:12px;opacity:.6">&times;</span>' +
+      '</div>';
+
+    showPreview(data.preview);
+  } catch (e) {
+    document.getElementById('upload-status').innerHTML = '<div class="alert alert-error">Failed to load sample data.</div>';
+  }
+}
+
+// ─── Preview table ────────────────────────────────────────────────────────
+function showPreview(rows) {
+  if (!rows || rows.length === 0) return;
+  document.getElementById('preview-card').style.display = 'block';
+  var html = '<table><tr><th>Zip Code</th><th>MSL Name</th><th>Email</th></tr>';
+  rows.slice(0, 10).forEach(function(r) {
+    html += '<tr><td>' + esc(r.zip) + '</td><td>' + esc(r.msl_name) + '</td><td>' + esc(r.msl_email) + '</td></tr>';
+  });
+  html += '</table>';
+  if (rows.length >= 10) html += '<p style="font-size:.8rem;color:#a0aec0;margin-top:8px">Showing first 10 rows of loaded data.</p>';
+  document.getElementById('preview-table').innerHTML = html;
+}
+
+// ─── Clear all data ───────────────────────────────────────────────────────
+function showClearConfirm() {
+  document.getElementById('clear-confirm').style.display = 'block';
+  document.getElementById('clear-btn').style.display     = 'none';
+  document.getElementById('clear-status').innerHTML      = '';
+}
+function cancelClear() {
+  document.getElementById('clear-confirm').style.display = 'none';
+  document.getElementById('clear-btn').style.display     = 'block';
+}
+
+async function confirmClear() {
+  try {
+    var res = await fetch('/api/clear', { method: 'POST' });
+    if (!res.ok) {
+      // Not admin — prompt for PIN then try again
+      document.getElementById('clear-status').innerHTML =
+        '<div class="alert alert-error">Admin authentication required. Please log in via the Admin tab first.</div>';
+      document.getElementById('clear-confirm').style.display = 'none';
+      document.getElementById('clear-btn').style.display     = 'block';
+      return;
+    }
+
+    // Reset local state
+    App.teams = []; App.teamData = {}; App.selectedTeam = '';
+    App.coverages = []; App.covLog = []; App.sessionLog = [];
+    App.adminUnlocked = false;
+
+    // Reset UI
+    document.getElementById('upload-status').innerHTML          = '';
+    document.getElementById('clear-status').innerHTML           =
+      '<div class="alert alert-success">All data cleared.</div>';
+    document.getElementById('clear-confirm').style.display      = 'none';
+    document.getElementById('clear-btn').style.display          = 'block';
+    document.getElementById('preview-card').style.display       = 'none';
+    document.getElementById('preview-table').innerHTML          = '';
+    document.getElementById('search-result').innerHTML          = '';
+    document.getElementById('zip-input').value                  = '';
+    document.getElementById('admin-gate-wrap').style.display    = 'block';
+    document.getElementById('admin-panel').style.display        = 'none';
+    document.getElementById('pin-input').value                  = '';
+
+    // Reset file input so the same file can be re-selected
+    var fi    = document.getElementById('file-input');
+    var newFi = document.createElement('input');
+    newFi.type     = 'file';
+    newFi.id       = 'file-input';
+    newFi.accept   = '.csv,.xlsx';
+    newFi.style.display = 'none';
+    newFi.onchange = handleFile;
+    fi.parentNode.replaceChild(newFi, fi);
+
+    refreshTeamSelector();
+    refreshAdminTeamDropdown();
+    refreshCovDropdowns();
+  } catch (e) {
+    document.getElementById('clear-status').innerHTML =
+      '<div class="alert alert-error">Clear failed. Please try again.</div>';
+  }
+}
+
+// ─── Session summary export ───────────────────────────────────────────────
+function exportSessionSummary() {
+  if (!App.sessionLog || App.sessionLog.length === 0) {
+    alert('No lookups have been performed this session.');
+    return;
+  }
+  var headers = ['Date/Time', 'Zip Code', 'Team', 'MSL Name', 'Territory', 'Note'];
+  var rows = [headers].concat(App.sessionLog.map(function(r) {
+    return [formatDateTime(r.ts), r.zip, r.team, r.msl, r.territory, r.note];
+  }));
+  var csv = rows.map(function(row) {
+    return row.map(function(v) {
+      v = String(v == null ? '' : v);
+      if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+        v = '"' + v.replace(/"/g, '""') + '"';
+      }
+      return v;
+    }).join(',');
+  }).join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'session-summary-' + todayStr() + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Reassignment export ──────────────────────────────────────────────────
+async function exportReassignments() {
+  // Fetch fresh data so export is always complete regardless of which tab was visited
+  var active = [], history = [];
+  try {
+    var r1 = await fetch('/api/coverages');
+    if (r1.status === 401) { showAdminGate(); return; }
+    active = await r1.json();
+  } catch (e) { /* fall back to cached */ active = App.coverages || []; }
+  try {
+    var r2 = await fetch('/api/history');
+    if (r2.status === 401) { showAdminGate(); return; }
+    history = await r2.json();
+  } catch (e) { /* fall back to cached */ history = App.covLog || []; }
+
+  var today = todayStr();
+
+  function statusOf(c, isHistory) {
+    if (isHistory) return 'Historical';
+    return today < c.start_date ? 'Upcoming' : 'Active';
+  }
+
+  var all = active.map(function(c)  { return { c: c, hist: false }; })
+            .concat(history.map(function(c) { return { c: c, hist: true  }; }));
+
+  if (all.length === 0) {
+    alert('No reassignments found to export.');
+    return;
+  }
+
+  // Sort by created_at descending (most recent first)
+  all.sort(function(a, b) {
+    var ta = a.c.created_at || '', tb = b.c.created_at || '';
+    return ta > tb ? -1 : ta < tb ? 1 : 0;
+  });
+
+  var headers = ['Created At', 'Team', 'MSL on Leave', 'MSL on Leave Email',
+                 'Covering MSL', 'Covering MSL Email', 'Start Date', 'End Date',
+                 'Status', 'Created By'];
+
+  var rows = [headers].concat(all.map(function(row) {
+    var c = row.c;
+    return [
+      c.created_at   || '',
+      c.team         || 'Default',
+      c.from_name    || '',
+      c.from_email   || '',
+      c.to_name      || '',
+      c.to_email     || '',
+      formatDate(c.start_date),
+      formatDate(c.end_date),
+      statusOf(c, row.hist),
+      c.created_by   || 'Admin'
+    ];
+  }));
+
+  var csv = rows.map(function(row) {
+    return row.map(function(v) {
+      v = String(v == null ? '' : v);
+      if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+        v = '"' + v.replace(/"/g, '""') + '"';
+      }
+      return v;
+    }).join(',');
+  }).join('\r\n');
+
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'reassignments-' + todayStr() + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
